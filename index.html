@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Goo</title>
+  <meta name="description" content="A liquid snake game. Eat the drops, don't bite yourself.">
+  <meta name="theme-color" content="#EFE8FF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1C1235" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="preload" href="fonts/fredoka-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/styles.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <svg class="defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <defs>
+      <!-- Blur, then crush alpha back to hard edges: overlapping circles fuse into one liquid shape. -->
+      <filter id="goo" color-interpolation-filters="sRGB">
+        <feGaussianBlur id="goo-blur" in="SourceGraphic" stdDeviation="6" result="blur"/>
+        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8" result="goo"/>
+        <feComposite in="SourceGraphic" in2="goo" operator="atop"/>
+      </filter>
+    </defs>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5v14M15.5 5v14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9.5v5h4l5 4v-13l-5 4zM16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M4 9.5v5h4l5 4v-13l-5 4zM17 9.5l5 5M22 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-install" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <div class="app" data-screen="menu">
+    <header class="masthead">
+      <h1 class="wordmark" aria-label="Goo"><span>g</span><span>o</span><span>o</span></h1>
+      <div class="hud">
+        <p class="score-pill" id="score-pill"><span id="score">0</span> <span class="score-unit" id="score-unit">drops</span></p>
+        <p class="best-line" id="best-line">Best 0 on Syrup</p>
+      </div>
+    </header>
+
+    <main class="stage" id="stage">
+      <div class="board" id="board">
+        <canvas class="layer layer-goo" id="goo-canvas" aria-hidden="true"></canvas>
+        <canvas class="layer" id="top-canvas" role="img" aria-label="Snake board. Steer with the arrow keys, WASD or by swiping."></canvas>
+
+        <form class="overlay" id="menu" data-screen="menu" role="dialog" aria-labelledby="menu-title">
+          <h2 class="overlay-title" id="menu-title">Pick a viscosity</h2>
+          <fieldset class="viscosity" id="viscosity">
+            <legend class="visually-hidden">Viscosity</legend>
+            <span class="viscosity-thumb" aria-hidden="true"></span>
+            <label class="viscosity-option">
+              <input type="radio" name="viscosity" value="honey">
+              <span class="viscosity-name">Honey</span>
+              <span class="viscosity-best" data-best="honey"></span>
+            </label>
+            <label class="viscosity-option">
+              <input type="radio" name="viscosity" value="syrup">
+              <span class="viscosity-name">Syrup</span>
+              <span class="viscosity-best" data-best="syrup"></span>
+            </label>
+            <label class="viscosity-option">
+              <input type="radio" name="viscosity" value="water">
+              <span class="viscosity-name">Water</span>
+              <span class="viscosity-best" data-best="water"></span>
+            </label>
+          </fieldset>
+          <p class="viscosity-blurb" id="viscosity-blurb" aria-live="polite"></p>
+          <button class="btn btn-primary" type="submit">Play</button>
+          <p class="overlay-note">Edges wrap around. Only your own tail can stop you.</p>
+          <button class="btn btn-quiet" type="button" id="install" hidden>
+            <svg aria-hidden="true"><use href="#i-install"/></svg>Install app
+          </button>
+        </form>
+
+        <section class="overlay" id="paused" data-screen="paused" role="dialog" aria-labelledby="paused-title">
+          <h2 class="overlay-title" id="paused-title">Paused</h2>
+          <button class="btn btn-primary" type="button" id="resume">Resume</button>
+          <button class="btn btn-secondary" type="button" id="quit">Quit to menu</button>
+        </section>
+
+        <section class="overlay" id="over" data-screen="over" role="dialog" aria-labelledby="over-title">
+          <h2 class="overlay-title over-title" id="over-title">Splat!</h2>
+          <p class="over-score" id="over-score"></p>
+          <p class="over-best" id="over-best"></p>
+          <button class="btn btn-primary" type="button" id="again">Play again</button>
+          <button class="btn btn-secondary" type="button" id="change">Change viscosity</button>
+        </section>
+      </div>
+    </main>
+
+    <p class="visually-hidden" id="status" role="status" aria-live="polite"></p>
+
+    <footer class="dock">
+      <p class="hint">
+        <span class="hint-keys">Steer with the arrow keys or WASD. Space pauses.</span>
+        <span class="hint-touch">Swipe anywhere to steer.</span>
+      </p>
+      <div class="dock-buttons">
+        <button class="icon-btn" type="button" id="mute" aria-pressed="false" aria-label="Mute sound and vibration">
+          <svg class="icon-on" aria-hidden="true"><use href="#i-sound"/></svg>
+          <svg class="icon-off" aria-hidden="true"><use href="#i-muted"/></svg>
+        </button>
+        <button class="icon-btn pause-btn" type="button" id="pause" aria-label="Pause">
+          <svg aria-hidden="true"><use href="#i-pause"/></svg>
+        </button>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>
